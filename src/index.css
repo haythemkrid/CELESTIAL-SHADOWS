@@ -15,10 +15,25 @@
       radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.05), transparent 32%),
       linear-gradient(180deg, #05070d 0%, #020308 100%);
     background-attachment: fixed;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   #root {
     min-height: 100vh;
+    min-height: 100dvh;
+    position: relative;
+  }
+
+  @supports (padding: max(0px)) {
+    #root {
+      padding-left: max(0px, env(safe-area-inset-left));
+      padding-right: max(0px, env(safe-area-inset-right));
+      padding-top: max(0px, env(safe-area-inset-top));
+      padding-bottom: max(0px, env(safe-area-inset-bottom));
+    }
   }
 }
 
@@ -49,4 +64,14 @@
 
 .glass-dark {
   @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl;
+}
+
+@layer components {
+  button {
+    @apply active:scale-95 transition-transform duration-75;
+  }
+
+  input[type='range'] {
+    @apply touch-none;
+  }
 }

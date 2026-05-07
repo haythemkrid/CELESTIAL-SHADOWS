@@ -46,6 +46,7 @@ export default function App() {
         onLunarEclipse={goToLunarEclipse}
         onResumeOrbit={resumeOrbit}
       />
+      
 
       <HotspotLayer showHotspots={showHotspots} hotspotScreenPos={hotspotScreenPos} />
 
