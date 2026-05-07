@@ -50,10 +50,20 @@ export function useEclipseSimulation(mountRef: RefObject<HTMLDivElement>) {
   const composerRef = useRef<EffectComposer | null>(null);
 
   const earthGroupRef = useRef<THREE.Group | null>(null);
+  const earthRef = useRef<THREE.Mesh | null>(null);
+  const moonMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const atmosphereRef = useRef<THREE.Mesh | null>(null);
+  const atmosphereMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const moonRef = useRef<THREE.Mesh | null>(null);
   const starFieldRef = useRef<THREE.Points | null>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   const orbitParams = useRef({ earthAngle: 0, moonAngle: 0 });
+  const moonInUmbraRef = useRef(false);
+
+  const moonShadowColor = new THREE.Color('#661100');
+  const moonBaseEmissive = new THREE.Color('#000000');
+  const atmosphereBlue = new THREE.Color('#4aa3ff');
+  const atmosphereOrange = new THREE.Color('#ff8a3d');
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -129,7 +139,8 @@ export function useEclipseSimulation(mountRef: RefObject<HTMLDivElement>) {
     sunLight.shadow.bias = -0.0001;
     scene.add(sunLight);
 
-    scene.add(new THREE.AmbientLight(0x404040, 0.15));
+    scene.add(new THREE.AmbientLight(0x9fb4c8, 0.05));
+    scene.add(new THREE.HemisphereLight(0xa8c9ff, 0x090b12, 0.04));
 
     const sun = new THREE.Mesh(
       new THREE.SphereGeometry(SCALE.SUN, 64, 64),
@@ -148,6 +159,55 @@ export function useEclipseSimulation(mountRef: RefObject<HTMLDivElement>) {
     earth.castShadow = true;
     earth.receiveShadow = true;
     earthGroup.add(earth);
+    earthRef.current = earth;
+
+    const atmosphereUniforms = {
+      uTime: { value: 0 },
+      uIntensity: { value: 0.35 },
+      uBlue: { value: atmosphereBlue.clone() },
+      uOrange: { value: atmosphereOrange.clone() },
+    };
+
+    const atmosphere = new THREE.Mesh(
+      new THREE.SphereGeometry(SCALE.EARTH * 1.08, 64, 64),
+      new THREE.ShaderMaterial({
+        uniforms: atmosphereUniforms,
+        vertexShader: `
+          varying vec3 vNormal;
+          varying vec3 vWorldPosition;
+
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPosition.xyz;
+            gl_Position = projectionMatrix * viewMatrix * worldPosition;
+          }
+        `,
+        fragmentShader: `
+          uniform float uIntensity;
+          uniform vec3 uBlue;
+          uniform vec3 uOrange;
+          varying vec3 vNormal;
+          varying vec3 vWorldPosition;
+
+          void main() {
+            vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+            float fresnel = pow(1.0 - max(dot(normalize(vNormal), viewDirection), 0.0), 2.2);
+            vec3 glow = mix(uBlue, uOrange, smoothstep(0.15, 0.9, fresnel));
+            float alpha = fresnel * uIntensity;
+            gl_FragColor = vec4(glow, alpha);
+          }
+        `,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+      })
+    );
+    atmosphere.renderOrder = 2;
+    earthGroup.add(atmosphere);
+    atmosphereRef.current = atmosphere;
+    atmosphereMaterialRef.current = atmosphere.material as THREE.ShaderMaterial;
 
     const moonSystem = new THREE.Group();
     moonSystem.rotation.x = SCALE.MOON_TILT;
@@ -155,12 +215,13 @@ export function useEclipseSimulation(mountRef: RefObject<HTMLDivElement>) {
 
     const moon = new THREE.Mesh(
       new THREE.SphereGeometry(SCALE.MOON, 32, 32),
-      new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 })
+      new THREE.MeshStandardMaterial({ color: 0x9a9a9a, roughness: 0.9, emissive: moonBaseEmissive.clone(), emissiveIntensity: 0.25 })
     );
     moon.castShadow = true;
     moon.receiveShadow = true;
     moonSystem.add(moon);
     moonRef.current = moon;
+    moonMaterialRef.current = moon.material as THREE.MeshStandardMaterial;
 
     const earthOrbitCurve = new THREE.EllipseCurve(0, 0, SCALE.EARTH_ORBIT_X, SCALE.EARTH_ORBIT_Z);
     const earthOrbitPoints = earthOrbitCurve.getPoints(200);
@@ -235,6 +296,53 @@ export function useEclipseSimulation(mountRef: RefObject<HTMLDivElement>) {
         moon.rotation.y += delta * 0.2;
       }
 
+      if (atmosphereMaterialRef.current) {
+        atmosphereMaterialRef.current.uniforms.uTime.value += delta;
+      }
+
+      if (earthRef.current && moonRef.current && moonMaterialRef.current && atmosphereMaterialRef.current) {
+        const earthWorldPosition = new THREE.Vector3();
+        const moonWorldPosition = new THREE.Vector3();
+        earthRef.current.getWorldPosition(earthWorldPosition);
+        moonRef.current.getWorldPosition(moonWorldPosition);
+
+        const sunToEarth = earthWorldPosition.clone();
+        const sunToEarthDistance = sunToEarth.length();
+        const shadowAxis = sunToEarth.clone().normalize();
+        const moonProjection = moonWorldPosition.dot(shadowAxis);
+        const behindEarthDistance = moonProjection - sunToEarthDistance;
+        const moonOffset = moonWorldPosition.clone().sub(shadowAxis.clone().multiplyScalar(moonProjection)).length();
+        const umbraHalfAngle = Math.atan2(Math.max(SCALE.SUN - SCALE.EARTH, 0.01), Math.max(sunToEarthDistance, 0.01));
+        const umbraLength = SCALE.EARTH / Math.tan(Math.max(umbraHalfAngle, 0.0001));
+        const umbraRadius = Math.max(0, SCALE.EARTH - Math.max(behindEarthDistance, 0) * Math.tan(umbraHalfAngle));
+        const moonInUmbra = behindEarthDistance > 0 && behindEarthDistance < umbraLength && moonOffset < umbraRadius + SCALE.MOON * 0.45;
+
+        if (moonInUmbra !== moonInUmbraRef.current) {
+          moonInUmbraRef.current = moonInUmbra;
+
+          gsap.to(moonMaterialRef.current.emissive, {
+            r: moonInUmbra ? moonShadowColor.r : moonBaseEmissive.r,
+            g: moonInUmbra ? moonShadowColor.g : moonBaseEmissive.g,
+            b: moonInUmbra ? moonShadowColor.b : moonBaseEmissive.b,
+            duration: 0.9,
+            ease: 'power2.out',
+          });
+
+          gsap.to(moonMaterialRef.current, {
+            emissiveIntensity: moonInUmbra ? 1.25 : 0.25,
+            roughness: moonInUmbra ? 0.98 : 0.9,
+            duration: 0.9,
+            ease: 'power2.out',
+          });
+
+          gsap.to(atmosphereMaterialRef.current.uniforms.uIntensity, {
+            value: moonInUmbra ? 1.05 : 0.35,
+            duration: 1.1,
+            ease: 'power2.out',
+          });
+        }
+      }
+
       if (showHotspotsRef.current && cameraRef.current && earthGroupRef.current) {
         const nextScreenPos: Record<string, { x: number; y: number }> = {};
         const tempVector = new THREE.Vector3();
@@ -267,8 +375,9 @@ export function useEclipseSimulation(mountRef: RefObject<HTMLDivElement>) {
 
       if (starFieldRef.current) {
         starFieldRef.current.rotation.y += delta * 0.005;
-        starFieldRef.current.position.x = THREE.MathUtils.lerp(starFieldRef.current.position.x, mouseRef.current.x * 2, 0.05);
-        starFieldRef.current.position.y = THREE.MathUtils.lerp(starFieldRef.current.position.y, -mouseRef.current.y * 2, 0.05);
+        starFieldRef.current.position.x = THREE.MathUtils.lerp(starFieldRef.current.position.x, mouseRef.current.x * 4, 0.06);
+        starFieldRef.current.position.y = THREE.MathUtils.lerp(starFieldRef.current.position.y, -mouseRef.current.y * 4, 0.06);
+        starFieldRef.current.position.z = THREE.MathUtils.lerp(starFieldRef.current.position.z, mouseRef.current.x * -1.5, 0.03);
       }
 
       if (!controlsRef.current) return;
@@ -321,6 +430,10 @@ export function useEclipseSimulation(mountRef: RefObject<HTMLDivElement>) {
       controlsRef.current = null;
       composerRef.current = null;
       earthGroupRef.current = null;
+      earthRef.current = null;
+      moonMaterialRef.current = null;
+      atmosphereRef.current = null;
+      atmosphereMaterialRef.current = null;
       moonRef.current = null;
       starFieldRef.current = null;
     };

@@ -39,7 +39,8 @@
     radial-gradient(circle at 70% 25%, rgba(120, 150, 255, 0.16), transparent 28%),
     radial-gradient(circle at 35% 80%, rgba(255, 255, 255, 0.08), transparent 30%),
     linear-gradient(180deg, rgba(2, 4, 12, 0.9) 0%, rgba(0, 0, 0, 0.96) 100%);
-  animation: scene-drift 24s ease-in-out infinite alternate;
+  background-size: 140% 140%;
+  animation: scene-drift 18s ease-in-out infinite alternate;
 }
 
 .glass {
