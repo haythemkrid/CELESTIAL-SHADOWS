@@ -31,7 +31,11 @@ export function SimulationControlPanel({
   onResumeOrbit,
 }: SimulationControlPanelProps) {
   return (
-    <div className="absolute bottom-3 sm:bottom-4 left-2 sm:left-4 right-2 sm:right-4 pointer-events-none z-20">
+    <div
+      className="absolute left-2 sm:left-4 right-2 sm:right-4 pointer-events-none z-20"
+      // ensure the panel sits above phone nav bars / safe areas
+      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+    >
       <div className="glass-dark p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 pointer-events-auto overflow-x-auto">
         <button
           onClick={onTogglePlay}
