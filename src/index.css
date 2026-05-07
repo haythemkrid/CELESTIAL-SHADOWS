@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-black text-white antialiased overflow-hidden;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255, 210, 92, 0.12), transparent 28%),
+      radial-gradient(circle at 80% 30%, rgba(89, 132, 255, 0.14), transparent 26%),
+      radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.05), transparent 32%),
+      linear-gradient(180deg, #05070d 0%, #020308 100%);
+    background-attachment: fixed;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@keyframes scene-drift {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    transform: scale(1.05) translate3d(-1.5%, -1%, 0);
+    filter: hue-rotate(8deg);
+  }
+}
+
+.scene-backdrop {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 190, 70, 0.18), transparent 24%),
+    radial-gradient(circle at 70% 25%, rgba(120, 150, 255, 0.16), transparent 28%),
+    radial-gradient(circle at 35% 80%, rgba(255, 255, 255, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(2, 4, 12, 0.9) 0%, rgba(0, 0, 0, 0.96) 100%);
+  animation: scene-drift 24s ease-in-out infinite alternate;
+}
+
+.glass {
+  @apply bg-white/10 backdrop-blur-md border border-white/20;
+}
+
+.glass-dark {
+  @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl;
+}

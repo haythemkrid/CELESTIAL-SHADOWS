@@ -1,0 +1,6 @@
+{
+  "name": "Celestial Shadows",
+  "description": "An interactive 3D Sun-Earth-Moon simulation demonstrating solar and lunar eclipses with accurate orbital mechanics and immersive visuals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
