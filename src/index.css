@@ -10,7 +10,7 @@
   body {
     @apply bg-black text-white antialiased overflow-hidden;
     background:
-      radial-gradient(circle at 20% 20%, rgba(255, 210, 92, 0.12), transparent 28%),
+      radial-gradient(circle at 80% 30%, rgba(89, 132, 255, 0.14), transparent 26%),
       radial-gradient(circle at 80% 30%, rgba(89, 132, 255, 0.14), transparent 26%),
       radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.05), transparent 32%),
       linear-gradient(180deg, #05070d 0%, #020308 100%);
