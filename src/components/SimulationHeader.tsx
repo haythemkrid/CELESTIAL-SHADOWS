@@ -14,7 +14,7 @@ export function SimulationHeader({ phenomenon }: SimulationHeaderProps) {
     >
       <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tighter text-white drop-shadow-lg flex items-center gap-2 sm:gap-3">
         <Sun className="text-blue-400 w-6 sm:w-8 h-6 sm:h-8 animate-pulse" />
-        <span className="font-semibold">Celestial</span> <span className="hidden sm:inline">Shadows</span>
+        <span className="font-semibold">Celestial workshop</span> <span className="hidden sm:inline">Shadows</span>
       </h1>
       <p className="text-white/50 font-mono text-[10px] sm:text-xs uppercase tracking-widest mt-1 sm:mt-2 ml-1">
         {phenomenon}
